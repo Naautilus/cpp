@@ -71,7 +71,8 @@
     "variant": "cpp",
     "filesystem": "cpp",
     "controldict": "cpp",
-    "u": "cpp"
+    "u": "cpp",
+    "decomposepardict": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled"
 }

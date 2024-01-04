@@ -8,9 +8,9 @@ using namespace std;
 const double EXIT_RADIUS = 3.85*0.5;
 const double THROAT_RADIUS = 2.85*0.5;
 const double CHAMBER_RADIUS = 12.10*0.5;
-const double ATMOSPHERE_TO_EXIT_RADIUS_RATIO = 3; // cells between the chamber and atmosphere regions need to have matching faces which only integers and specific ratios work for
+const double ATMOSPHERE_TO_EXIT_RADIUS_RATIO = 4; // cells between the chamber and atmosphere regions need to have matching faces which only integers and specific ratios work for
 const double ATMOSPHERE_REGION_RADIUS = EXIT_RADIUS * ATMOSPHERE_TO_EXIT_RADIUS_RATIO;
-const double ATMOSPHERE_REGION_HEIGHT = 40;
+const double ATMOSPHERE_REGION_HEIGHT = 50;
 
 int main() {
 
