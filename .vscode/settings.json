@@ -72,7 +72,8 @@
     "filesystem": "cpp",
     "controldict": "cpp",
     "u": "cpp",
-    "decomposepardict": "cpp"
+    "decomposepardict": "cpp",
+    "fvsolution": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled"
 }

@@ -21,7 +21,8 @@ boundaryField
 {
     inlet
     {
-        type            timeVaryingMappedFixedValue;
+        //type            timeVaryingMappedFixedValue;
+        type            zeroGradient;
     }
 
     sides
