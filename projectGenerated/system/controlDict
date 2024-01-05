@@ -24,13 +24,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         5e-03;
+endTime         5e-03;        
 
 deltaT          1e-08;
 
 writeControl    runTime;
 
-writeInterval   2e-07;
+writeInterval   1e-06;
 
 cycleWrite      0;
 
@@ -46,7 +46,7 @@ timePrecision   6;
 
 adjustTimeStep  yes;
 
-maxCo           0.03;
+maxCo           0.02;
 
 maxDeltaT       1;
 
@@ -55,7 +55,7 @@ functions {
     type			      MachNo;
     libs			      ("libfieldFunctionObjects.so");
 	  writeControl	  runTime;
-	  writeInterval	  2e-06;
+	  writeInterval	  1e-06;
   }
 }
 

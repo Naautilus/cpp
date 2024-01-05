@@ -73,7 +73,8 @@
     "controldict": "cpp",
     "u": "cpp",
     "decomposepardict": "cpp",
-    "fvsolution": "cpp"
+    "fvsolution": "cpp",
+    "physicalproperties": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled"
 }
