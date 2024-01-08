@@ -36,6 +36,13 @@ solvers
         tolerance       1e-10;
         relTol          0;
     }
+
+    "kFinal.*"
+    {
+        $U;
+        tolerance       1e-10;
+        relTol          0;
+    }
 }
 
 PIMPLE

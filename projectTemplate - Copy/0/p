@@ -24,12 +24,12 @@ boundaryField
 		type			timeVaryingMappedFixedValue;
 	}
 
-    outlet
+    sides
     {
         type            zeroGradient;
     }
 
-    sides
+    outlet
     {
         type            freestreamPressure;
         freestreamValue uniform 101325;

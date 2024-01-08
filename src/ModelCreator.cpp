@@ -14,7 +14,7 @@ enum structureType {CHAMBER, NOZZLE, ATMOSPHERE};
 
 class structureLayer {
   public:
-  double startRadius, endRadius, height, verticalDensityFactor, horizontalCellCountFactor;
+  double startRadius, endRadius, height, verticalDensityFactor, horizontalCellCountFactor, horizontallyExtendedCellsResolutionFactor;
   structureType type;
   structureLayer(){};
   structureLayer(double startRadius_, double endRadius_, double height_, structureType type_) {
@@ -24,14 +24,16 @@ class structureLayer {
     type = type_;
     verticalDensityFactor = 1;
     horizontalCellCountFactor = 1;
+    horizontallyExtendedCellsResolutionFactor = 1;
   }
-  structureLayer(double startRadius_, double endRadius_, double height_, structureType type_, double verticalDensityFactor_, double horizontalCellCountFactor_) {
+  structureLayer(double startRadius_, double endRadius_, double height_, structureType type_, double verticalDensityFactor_, double horizontalCellCountFactor_, double horizontallyExtendedCellsResolutionFactor_) {
     startRadius = startRadius_;
     endRadius = endRadius_;
     height = height_;
     type = type_;
     verticalDensityFactor = verticalDensityFactor_;
     horizontalCellCountFactor = horizontalCellCountFactor_;
+    horizontallyExtendedCellsResolutionFactor = horizontallyExtendedCellsResolutionFactor_;
   }
 };
 
@@ -97,6 +99,33 @@ class ModelCreator {
         p3.scaleXY(scalingFactor),
         zIndexAtGeneration
       );
+    }
+    double getArea() {
+      return calculateTriangleArea(p1, p0, p3) + calculateTriangleArea(p1, p2, p3);
+    }
+    vector3 crossProduct(const vector3 &v1, const vector3 &v2) {
+      return vector3((v1.y * v2.z) - (v1.z * v2.y),
+                    (v1.z * v2.x) - (v1.x * v2.z),
+                    (v1.x * v2.y) - (v1.y * v2.x));
+    }
+
+    // Function to calculate the magnitude of a vector
+    double magnitude(const vector3 &v) {
+        return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    }
+    // Function to calculate the area of a triangle in 3D space
+    double calculateTriangleArea(const vector3 &v1, const vector3 &v2, const vector3 &v3) {
+      // Calculate two vectors representing two sides of the triangle
+      vector3 side1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+      vector3 side2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
+
+      // Calculate the cross product of the two vectors
+      vector3 cross = crossProduct(side1, side2);
+
+      // Calculate the magnitude of the cross product
+      double area = 0.5 * magnitude(cross);
+
+      return area;
     }
   };
 
@@ -184,7 +213,7 @@ class ModelCreator {
     vector<quad> atmoSideFaces;
     vector<quad> atmoBottomFaces;
 
-    cout << "structureData size: " + to_string(structureData.size()) + " fujadshjfasdhjklf;jhasdfjhksadhfjl\n" << endl;
+    cout << "structureData size: " + to_string(structureData.size()) + "\n" << endl;
     for (int zIndex = 0; zIndex <= structureData.size() - 1; zIndex++) {
       for (int radialIndex = 0; radialIndex < radialPointCount; radialIndex++) {
         quad q = quad(
@@ -290,7 +319,7 @@ class ModelCreator {
         face.scaleXY(1/structureData[face.zIndexAtGeneration].horizontalCellCountFactor),
         cellResolutionsPerUnit[0],
         ceil(cellResolutionsPerUnit[1] * structureData[face.zIndexAtGeneration].height * structureData[face.zIndexAtGeneration].verticalDensityFactor),
-        cellResolutionsPerUnit[2] * (structureData[face.zIndexAtGeneration].horizontalCellCountFactor-1),
+        cellResolutionsPerUnit[2] * (structureData[face.zIndexAtGeneration].horizontalCellCountFactor-1) * structureData[face.zIndexAtGeneration].horizontallyExtendedCellsResolutionFactor,
         vector3(cellResolutionDistribution)
       ));
     }
@@ -408,6 +437,14 @@ class ModelCreator {
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "outlet", boundaryToString("patch", atmoAllFaces));
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "blocks", cuboidListToString(cells));
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "sides", boundaryToString("wall", nozzleFaces));
+    FileEditor::writeOverFile("/areas", quadListToString_Area(atmoAllFaces));
+    string maxTimestampFilename = FileEditor::getHighestNumberFilename("");
+    vector<double> rho = FileEditor::splitStringIntoDoublesByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/rho", "outlet"));
+    vector<vector<double>> U = FileEditor::splitStringIntoVectorsByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/U", "outlet"));
+    for (int i = 0; i < rho.size(); i++) {
+      
+    }
+    //FileEditor::splitString(FileEditor::getSectionOfFile("/"))
     
 
   }
@@ -441,6 +478,18 @@ class ModelCreator {
     return output;
   }
 
+  static string quadToString_Area(quad q) {
+    return to_string(q.getArea());
+  }
+
+  static string quadListToString_Area(vector<quad> quads) {
+    string output = "";
+    for (quad q  : quads) {
+      output += quadToString_Area(q) + " ";
+    }
+    return output;
+  }
+
   static string boundaryToString(string boundaryType, vector<quad> quads) {
     return "type " + boundaryType + "; faces (" + quadListToString(quads) + ");";
   }
@@ -467,5 +516,4 @@ class ModelCreator {
     }
     return cellsString;
   }
-
 };

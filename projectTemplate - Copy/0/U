@@ -21,15 +21,16 @@ boundaryField
 {
     inlet
     {
-        type            timeVaryingMappedFixedValue;
-    }
-
-    outlet
-    {
+        //type            timeVaryingMappedFixedValue;
         type            zeroGradient;
     }
 
     sides
+    {
+        type            zeroGradient;
+    }
+
+    outlet
     {
         type            freestreamVelocity;
         freestreamValue uniform (0 0 0);

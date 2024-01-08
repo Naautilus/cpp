@@ -24,14 +24,14 @@ boundaryField
     {
 		type			timeVaryingMappedFixedValue;
 	}
-    outlet
+    sides
     {
         type            zeroGradient;
     }
-    sides
+    outlet
     {
-        type            fixedValue;
-        value           uniform 300;
+        type            freestream;
+        freestreamValue uniform 300;
     }
 }
 

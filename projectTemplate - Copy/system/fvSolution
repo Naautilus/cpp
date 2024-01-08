@@ -25,7 +25,7 @@ solvers
     {
         solver          smoothSolver;
         smoother        GaussSeidel;
-        nSweeps         2;
+        nSweeps         1;
         tolerance       1e-10;
         relTol          0;
     }
@@ -40,7 +40,10 @@ solvers
 
 PIMPLE
 {
-	nOuterCorrectors 2;
+    nCorrectors 2;
+    nNonOrthogonalCorrectors 1;
+	nOuterCorrectors 1;
+    momentumPredictor on;
 }
 
 
