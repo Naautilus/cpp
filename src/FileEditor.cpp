@@ -130,11 +130,11 @@ class FileEditor {
     long parenthesesCount = 0;
     bool previouslyGreaterThanZero = false;
     while (parenthesesCount > 0 || !previouslyGreaterThanZero) {
-      if ((fileContent.substr(endPos, 7) == "uniform")) {
+      if (/*endPos < fileContent.length()-10 && */(fileContent.substr(endPos, 7) == "uniform")) {
         cout << "uniform detected, shifting forward\n";
         if (filename_.substr(filename_.length()-2, 2) == "/U") {
           endPos += 50;
-          startPos += 80;
+          startPos += 70;
         }
         endPos += 10;
         startPos += 10;
@@ -148,7 +148,7 @@ class FileEditor {
       if(fileContent.substr(endPos, 1) == "{") parenthesesCount++;
       if(fileContent.substr(endPos, 1) == ")") parenthesesCount--;
       if(fileContent.substr(endPos, 1) == "}") parenthesesCount--;
-      //cout << "|" + fileContent.substr(endPos, 1) + to_string(parenthesesCount) + (previouslyGreaterThanZero ? "!" : ".");
+      cout << "|" + fileContent.substr(endPos, 1) + to_string(parenthesesCount) + (previouslyGreaterThanZero ? "!" : ".");
       endPos++;
     }
 

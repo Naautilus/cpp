@@ -212,6 +212,8 @@ class ModelCreator {
     vector<quad> atmoAllFaces;
     vector<quad> atmoSideFaces;
     vector<quad> atmoBottomFaces;
+    vector<cuboid> cells;
+    vector<cuboid> atmoCells;
 
     cout << "structureData size: " + to_string(structureData.size()) + "\n" << endl;
     for (int zIndex = 0; zIndex <= structureData.size() - 1; zIndex++) {
@@ -288,8 +290,6 @@ class ModelCreator {
 
     // generate a list of cuboid segments, or "cells" in the simulation
 
-    vector<cuboid> cells;
-    vector<cuboid> atmoCells;
 
     for (quad face : nozzleFaces) {
       cells.push_back(cuboid(
@@ -430,24 +430,28 @@ class ModelCreator {
       atmoCells[i].p7.num = getNum(atmoCells[i].p7, points);
     }
 
-    vector<quad> empty = {};
+    //vector<quad> empty = {};
 
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "vertices", vector3ListToString(points));
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "inlet", boundaryToString("patch", chamberAllFaces));
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "outlet", boundaryToString("patch", atmoAllFaces));
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "blocks", cuboidListToString(cells));
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "sides", boundaryToString("wall", nozzleFaces));
-    FileEditor::writeOverFile("/areas", quadListToString_Area(atmoAllFaces));
-    string maxTimestampFilename = FileEditor::getHighestNumberFilename("");
-    vector<double> rho = FileEditor::splitStringIntoDoublesByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/rho", "outlet"));
-    vector<vector<double>> U = FileEditor::splitStringIntoVectorsByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/U", "outlet"));
-    for (int i = 0; i < rho.size(); i++) {
-      
-    }
-    //FileEditor::splitString(FileEditor::getSectionOfFile("/"))
+    
     
 
   }
+
+  //static void calculateIsp() {
+  //  FileEditor::writeOverFile("/areas", quadListToString_Area(atmoAllFaces));
+  //  string maxTimestampFilename = FileEditor::getHighestNumberFilename("");
+  //  vector<double> rho = FileEditor::splitStringIntoDoublesByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/rho", "outlet"));
+  //  vector<vector<double>> U = FileEditor::splitStringIntoVectorsByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/U", "outlet"));
+  //  for (int i = 0; i < rho.size(); i++) {
+  //
+  //  }
+  //  //FileEditor::splitString(FileEditor::getSectionOfFile("/"))
+  //}
 
   static string vector3ToString(vector3 v) {
     return "(" + to_string(v.x) + " " + to_string(v.y) + " " + to_string(v.z) + ")";

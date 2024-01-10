@@ -1,0 +1,97 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  11
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     foamRun;
+
+solver          shockFluid;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         1e-04;        
+
+deltaT          1e-08;
+
+writeControl    runTime;
+
+writeInterval   1e-06;
+
+cycleWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  15;
+
+writeCompression off;
+
+timeFormat      fixed;
+
+timePrecision   10;
+
+adjustTimeStep  yes;
+
+maxCo           0.1;
+
+maxDeltaT       1;
+
+functions {
+  MachNo1 {
+    type			      MachNo;
+    libs			      ("libfieldFunctionObjects.so");
+    writeControl	  runTime;
+    writeInterval	  1e-06;
+  }
+  Flux1 {
+    type			      surfaceFieldValue;
+    libs			      ("libfieldFunctionObjects.so");
+    fields          (a);
+    operation       sum;
+    regionType      patch;  // if swak doesn't work, add a c++ script for +z mass flow rate instead
+    name            outlet;
+    writeFields     true;
+    surfaceFormat   none;
+    writeControl	  runTime;
+    writeInterval	  1e-06;
+  }
+}
+//surfaceFieldValueFunctions {
+//  flowRate {
+//    #includeFunc    patchFlowRate(patch=outlet)
+//    libs            ("libsampling.so" "libfieldFunctionObjects.so");
+//    type            patchFlowRate;
+//    patch           outlet;
+//    writeObject
+//    writeControl	  runTime;
+//    writeInterval	  1e-06;
+//  }
+//}
+  //flowBeforeSet
+  //  {
+  //      type swakExpression;
+  //      valueType surface;
+	//      surface outer;
+  //      expression "rho*U.z"; 
+  //      accumulations (
+  //          sum
+  //      );
+  //      verbose true;
+  //  }
+
+
+// ************************************************************************* //
