@@ -10,45 +10,81 @@
 using namespace std;
 namespace fs = filesystem;
 
+enum structureType {CHAMBER, NOZZLE, ATMOSPHERE};
+
+class structureLayer {
+  public:
+  double startRadius, endRadius, height, verticalDensityFactor, horizontalCellCountFactor, horizontallyExtendedCellsResolutionFactor;
+  structureType type;
+  structureLayer(){};
+  structureLayer(double startRadius_, double endRadius_, double height_, structureType type_) {
+    startRadius = startRadius_;
+    endRadius = endRadius_;
+    height = height_;
+    type = type_;
+    verticalDensityFactor = 1;
+    horizontalCellCountFactor = 1;
+    horizontallyExtendedCellsResolutionFactor = 1;
+  }
+  structureLayer(double startRadius_, double endRadius_, double height_, structureType type_, double verticalDensityFactor_, double horizontalCellCountFactor_, double horizontallyExtendedCellsResolutionFactor_) {
+    startRadius = startRadius_;
+    endRadius = endRadius_;
+    height = height_;
+    type = type_;
+    verticalDensityFactor = verticalDensityFactor_;
+    horizontalCellCountFactor = horizontalCellCountFactor_;
+    horizontallyExtendedCellsResolutionFactor = horizontallyExtendedCellsResolutionFactor_;
+  }
+};
+
+
 class ModelCreator {
   ModelCreator() = delete;
 
   public:
 
-  class Vector3 {
+  enum endType {bottom, top};
+
+  class vector3 {
     public:
     double x, y, z;
     int num;
-    Vector3(){}
-    Vector3(double x_, double y_, double z_) {
+    vector3(){}
+    vector3(double x_, double y_, double z_) {
       x = x_;
       y = y_;
       z = z_;
       num = -1;
     }
-    Vector3(vector<double> v) {
+    vector3(vector<double> v) {
       x = v[0];
       y = v[1];
       z = v[2];
       num = -1;
     }
-    Vector3 scaleXY(double scalingFactor) {
-      return Vector3(x * scalingFactor, y * scalingFactor, z);
+    vector3 scaleXY(double scalingFactor) {
+      return vector3(x * scalingFactor, y * scalingFactor, z);
     }
-    bool isEqual(Vector3 v) {
+    bool isEqual(vector3 v) {
       double epsilon = 0.000001;
       if ((v.x - x)*(v.x - x) + (v.y - y)*(v.y - y) + (v.z - z)*(v.z - z) < epsilon) {
         return true;
       }
       return false;
     }
+    vector3 operator+ (vector3 v) {
+      return vector3(x+v.x, y+v.y, z+v.z);
+    }
+    vector3 operator* (double m) {
+      return vector3(x*m, y*m, z*m);
+    }
   };
 
   class quad {
     public:
-    Vector3 p0, p1, p2, p3;
+    vector3 p0, p1, p2, p3;
     int zIndexAtGeneration;
-    quad(Vector3 p0_, Vector3 p1_, Vector3 p2_, Vector3 p3_, int z) {
+    quad(vector3 p0_, vector3 p1_, vector3 p2_, vector3 p3_, int z) {
       p0 = p0_;
       p1 = p1_;
       p2 = p2_;
@@ -64,13 +100,40 @@ class ModelCreator {
         zIndexAtGeneration
       );
     }
+    double getArea() {
+      return calculateTriangleArea(p1, p0, p3) + calculateTriangleArea(p1, p2, p3);
+    }
+    vector3 crossProduct(const vector3 &v1, const vector3 &v2) {
+      return vector3((v1.y * v2.z) - (v1.z * v2.y),
+                    (v1.z * v2.x) - (v1.x * v2.z),
+                    (v1.x * v2.y) - (v1.y * v2.x));
+    }
+
+    // Function to calculate the magnitude of a vector
+    double magnitude(const vector3 &v) {
+        return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    }
+    // Function to calculate the area of a triangle in 3D space
+    double calculateTriangleArea(const vector3 &v1, const vector3 &v2, const vector3 &v3) {
+      // Calculate two vectors representing two sides of the triangle
+      vector3 side1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+      vector3 side2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
+
+      // Calculate the cross product of the two vectors
+      vector3 cross = crossProduct(side1, side2);
+
+      // Calculate the magnitude of the cross product
+      double area = 0.5 * magnitude(cross);
+
+      return area;
+    }
   };
 
   struct cuboid {
-    Vector3 p0, p1, p2, p3, p4, p5, p6, p7, cellGrading;
+    vector3 p0, p1, p2, p3, p4, p5, p6, p7, cellGrading;
     double p, T, U;
     int cellsX, cellsY, cellsZ = 0;
-    cuboid(Vector3 p0_, Vector3 p1_, Vector3 p2_, Vector3 p3_, Vector3 p4_, Vector3 p5_, Vector3 p6_, Vector3 p7_, int cellsX_, int cellsY_, int cellsZ_, Vector3 cellGrading_, double p_, double T_, double U_) {
+    cuboid(vector3 p0_, vector3 p1_, vector3 p2_, vector3 p3_, vector3 p4_, vector3 p5_, vector3 p6_, vector3 p7_, int cellsX_, int cellsY_, int cellsZ_, vector3 cellGrading_, double p_, double T_, double U_) {
       p0 = p0_;
       p1 = p1_;
       p2 = p2_;
@@ -84,7 +147,7 @@ class ModelCreator {
       cellsZ = cellsZ_;
       cellGrading = cellGrading_;
     }
-    cuboid(quad q0, quad q1, int cellsX_, int cellsY_, int cellsZ_, Vector3 cellGrading_) {
+    cuboid(quad q0, quad q1, int cellsX_, int cellsY_, int cellsZ_, vector3 cellGrading_) {
       p0 = q0.p0;
       p1 = q0.p1;
       p2 = q0.p2;
@@ -101,32 +164,26 @@ class ModelCreator {
   };
 
   const double ATMOSPHERE_p = 14;
-  const double ATMOSPHERE_T = 300;
-  const Vector3 ATMOSPHERE_U = Vector3(0,0,0);
+  const double ATMOSPHERE_T = 300; // NOT ACTIVE
+  const vector3 ATMOSPHERE_U = vector3(0,0,0);
 
   const double CHAMBER_p = 140;
   const double CHAMBER_T = 600; // NOT ACTIVE
-  const Vector3 CHAMBER_U = Vector3(0,0,100);
+  const vector3 CHAMBER_U = vector3(0,0,100);
 
-  static Vector3 pointAt(int zIndex, int radialIndex, vector<vector<double>> diameterHeights, double totalHeight, double radialPointCount) {
-    double totalHeightWeight = 0;
-    for (vector<double> diameterHeight : diameterHeights) {
-      totalHeightWeight += diameterHeight[1];
+  static vector3 pointAt(int zIndex, int radialIndex, vector<structureLayer> structureData, int radialPointCount, endType endtype) {
+    double z = 0;
+    for (int i = 0; i < zIndex + (endtype == top); i++) {
+      z += structureData[i].height;
     }
-    double currentHeightFraction = 0;
-    for (int i = 0; i <= zIndex; i++) {
-      currentHeightFraction += diameterHeights[i][1];
-    }
-    currentHeightFraction /= totalHeightWeight;
-    //double z = zIndex * (totalHeight/(diameterHeights.size() - 1));
-    double z = currentHeightFraction * totalHeight;
     double angle = 2 * M_PI * radialIndex / radialPointCount;
-    double x = sin(angle) * diameterHeights[zIndex][0];
-    double y = cos(angle) * diameterHeights[zIndex][0];
-    return Vector3(x,y,z);
+    double radius = (endtype == top ? structureData[zIndex].endRadius : structureData[zIndex].startRadius);
+    double x = sin(angle) * radius;
+    double y = cos(angle) * radius;
+    return vector3(x,y,z);
   }
 
-  static int getPointIndex(Vector3 &x, vector<Vector3> &v) {
+  static int getPointIndex(vector3 &x, vector<vector3> &v) {
     int index = -1;
     for (int i = 0; i < v.size(); i++) {
       if (v[i].isEqual(x)) {
@@ -136,150 +193,168 @@ class ModelCreator {
     return index;
   }
 
-  static void addPointsToList(Vector3 &x, vector<Vector3> &v) {
+  static void addPointsToList(vector3 &x, vector<vector3> &v) {
     int index = getPointIndex(x, v);
     if (index == -1) v.push_back(x);
   }
 
-  static int getNum(Vector3 &x, vector<Vector3> &v) {
+  static int getNum(vector3 &x, vector<vector3> &v) {
     return v[getPointIndex(x, v)].num;
   }
 
-  static void createModel(vector<vector<double>> diameterHeights, int radialPointCount, vector<double> &cellResolutionsPerUnit, vector<double> &cellResolutionDistribution) {
-    
-    double totalHeight = 0;
-    for (vector<double> dh : diameterHeights) {
-      totalHeight += dh[1];
-    }
+  static void createModel(vector<structureLayer> structureData, int radialPointCount, vector<double> &cellResolutionsPerUnit, vector<double> &cellResolutionDistribution) {
 
     // generate a list of edge faces, or "walls" in the simulation
 
-    vector<quad> edgeFaces;
-    vector<quad> bottomFaces;
-    vector<quad> bottomSideFaces;
-    vector<quad> topFaces;
-    vector<quad> topSideFaces;
+    vector<quad> nozzleFaces;
+    vector<quad> chamberSideFaces;
+    vector<quad> chamberAllFaces;
+    vector<quad> atmoAllFaces;
+    vector<quad> atmoSideFaces;
+    vector<quad> atmoBottomFaces;
+    vector<cuboid> cells;
+    vector<cuboid> atmoCells;
 
-    cout << "diameterHeights size: " + to_string(diameterHeights.size()) + " fujadshjfasdhjklf;jhasdfjhksadhfjl\n" << endl;
-    for (double zIndex = 0; zIndex < diameterHeights.size() - 1; zIndex++) {
-      for (double radialIndex = 0; radialIndex < radialPointCount; radialIndex++) {
+    cout << "structureData size: " + to_string(structureData.size()) + "\n" << endl;
+    for (int zIndex = 0; zIndex <= structureData.size() - 1; zIndex++) {
+      for (int radialIndex = 0; radialIndex < radialPointCount; radialIndex++) {
         quad q = quad(
-          pointAt(zIndex, radialIndex, diameterHeights, totalHeight, radialPointCount),
-          pointAt(zIndex, radialIndex+1, diameterHeights, totalHeight, radialPointCount),
-          pointAt(zIndex+1, radialIndex+1, diameterHeights, totalHeight, radialPointCount),
-          pointAt(zIndex+1, radialIndex, diameterHeights, totalHeight, radialPointCount),
+          pointAt(zIndex, radialIndex, structureData, radialPointCount, bottom),
+          pointAt(zIndex, radialIndex+1, structureData, radialPointCount, bottom),
+          pointAt(zIndex, radialIndex+1, structureData, radialPointCount, top),
+          pointAt(zIndex, radialIndex, structureData, radialPointCount, top),
           zIndex
-        ); // put in both bottom/top and bottom/top-side because the 
-        if (diameterHeights[zIndex+1][2] == 0) { // chamber
-          bottomFaces.push_back(q);
-          bottomSideFaces.push_back(q);
-        } else if (diameterHeights[zIndex+1][2] == 1) { // nozzle
-          edgeFaces.push_back(q);
-        } else { // atmosphere
-          topFaces.push_back(q);
-          topSideFaces.push_back(q);
+        ); // put in both bottom/top and their sides because the sides 
+        switch (structureData[zIndex].type) {
+          case CHAMBER:
+            chamberAllFaces.push_back(q);
+            chamberSideFaces.push_back(q);
+            break;
+          case NOZZLE:
+            nozzleFaces.push_back(q);
+            break;
+          case ATMOSPHERE:
+            atmoAllFaces.push_back(q);
+            atmoSideFaces.push_back(q);
+            break;
         }
+        //if (structureData[zIndex+1].type == CHAMBER) { // chamber
+        //  chamberAllFaces.push_back(q);
+        //  chamberSideFaces.push_back(q);
+        //} else if (structureData[zIndex+1].type == NOZZLE) { // nozzle
+        //  nozzleFaces.push_back(q);
+        //} else { // atmosphere
+        //  atmoAllFaces.push_back(q);
+        //  atmoSideFaces.push_back(q);
+        //}
       }
     }
 
-    // generate faces for the top + bottom endcaps
-
     for (double radialIndex = 0; radialIndex < radialPointCount; radialIndex++) {
-      bottomFaces.push_back(quad(
-        pointAt(0, radialIndex, diameterHeights, totalHeight, radialPointCount),
-        pointAt(0, radialIndex+1, diameterHeights, totalHeight, radialPointCount),
-        pointAt(0, radialIndex+1, diameterHeights, totalHeight, radialPointCount).scaleXY(0),
-        pointAt(0, radialIndex, diameterHeights, totalHeight, radialPointCount).scaleXY(0),
+      chamberAllFaces.push_back(quad(
+        pointAt(0, radialIndex, structureData, radialPointCount, bottom),
+        pointAt(0, radialIndex+1, structureData, radialPointCount, bottom),
+        pointAt(0, radialIndex+1, structureData, radialPointCount, bottom).scaleXY(0),
+        pointAt(0, radialIndex, structureData, radialPointCount, bottom).scaleXY(0),
         0
       ));
     }
 
-
-
     for (double radialIndex = 0; radialIndex < radialPointCount; radialIndex++) {
-      topFaces.push_back(quad(
-        pointAt(diameterHeights.size()-1, radialIndex, diameterHeights, totalHeight, radialPointCount),
-        pointAt(diameterHeights.size()-1, radialIndex+1, diameterHeights, totalHeight, radialPointCount),
-        pointAt(diameterHeights.size()-1, radialIndex+1, diameterHeights, totalHeight, radialPointCount).scaleXY(0),
-        pointAt(diameterHeights.size()-1, radialIndex, diameterHeights, totalHeight, radialPointCount).scaleXY(0),
-        diameterHeights.size()
+      atmoAllFaces.push_back(quad(
+        pointAt(structureData.size()-1, radialIndex, structureData, radialPointCount, top),
+        pointAt(structureData.size()-1, radialIndex+1, structureData, radialPointCount, top),
+        pointAt(structureData.size()-1, radialIndex+1, structureData, radialPointCount, top).scaleXY(1/structureData[structureData.size()-1].horizontalCellCountFactor),
+        pointAt(structureData.size()-1, radialIndex, structureData, radialPointCount, top).scaleXY(1/structureData[structureData.size()-1].horizontalCellCountFactor),
+        structureData.size()
+      ));
+      atmoAllFaces.push_back(quad(
+        pointAt(structureData.size()-1, radialIndex, structureData, radialPointCount, top).scaleXY(1/structureData[structureData.size()-1].horizontalCellCountFactor),
+        pointAt(structureData.size()-1, radialIndex+1, structureData, radialPointCount, top).scaleXY(1/structureData[structureData.size()-1].horizontalCellCountFactor),
+        pointAt(structureData.size()-1, radialIndex+1, structureData, radialPointCount, top).scaleXY(0),
+        pointAt(structureData.size()-1, radialIndex, structureData, radialPointCount, top).scaleXY(0),
+        structureData.size()
+      ));
+    }
+
+    int firstAtmoCellIndex = atmoAllFaces[0].zIndexAtGeneration;
+    for (double radialIndex = 0; radialIndex < radialPointCount; radialIndex++) {
+      atmoAllFaces.push_back(quad(
+        pointAt(firstAtmoCellIndex, radialIndex, structureData, radialPointCount, bottom),
+        pointAt(firstAtmoCellIndex, radialIndex+1, structureData, radialPointCount, bottom),
+        pointAt(firstAtmoCellIndex, radialIndex+1, structureData, radialPointCount, bottom).scaleXY(1/structureData[firstAtmoCellIndex].horizontalCellCountFactor),
+        pointAt(firstAtmoCellIndex, radialIndex, structureData, radialPointCount, bottom).scaleXY(1/structureData[firstAtmoCellIndex].horizontalCellCountFactor),
+        firstAtmoCellIndex
       ));
     }
 
     // generate a list of cuboid segments, or "cells" in the simulation
 
-    vector<cuboid> cells;
-    vector<cuboid> atmoCells;
 
-    for (quad face : edgeFaces) {
+    for (quad face : nozzleFaces) {
       cells.push_back(cuboid(
         face, // 1 first instead of 0 because OpenFOAM uses a normalized vector between point 0 and the points around it, which would have a distance of 0 if the 0-scaled face was first
-        face.scaleXY(0), // I have a feeling that a scaling factor of 0, turning a cuboid into a wedge, would make OpenFOAM crash so a very small number will do in case this breaks it
-        ///ceil(cellResolutionsPerUnit[0] * diameterHeights[face.zIndexAtGeneration][0]), // {side-to-side radius-wise,
-        ///ceil(cellResolutionsPerUnit[1] * diameterHeights[face.zIndexAtGeneration][1]), //  vertical,
-        ///ceil(cellResolutionsPerUnit[2] * diameterHeights[face.zIndexAtGeneration][0]), //  in-out}
+        face.scaleXY(0),
         cellResolutionsPerUnit[0],
-        ceil(cellResolutionsPerUnit[1] * diameterHeights[face.zIndexAtGeneration+1][1] * diameterHeights[face.zIndexAtGeneration+1][3]),
-        cellResolutionsPerUnit[2],
-        Vector3(cellResolutionDistribution)
+        ceil(cellResolutionsPerUnit[1] * structureData[face.zIndexAtGeneration].height * structureData[face.zIndexAtGeneration].verticalDensityFactor),
+        cellResolutionsPerUnit[2] * structureData[face.zIndexAtGeneration].horizontalCellCountFactor,
+        vector3(cellResolutionDistribution)
       ));
     }
 
-    for (quad face : bottomSideFaces) {
+    for (quad face : chamberSideFaces) {
       cells.push_back(cuboid(
-        face, // 1 first instead of 0 because OpenFOAM uses a normalized vector between point 0 and the points around it, which would have a distance of 0 if the 0-scaled face was first
-        face.scaleXY(0), // I have a feeling that a scaling factor of 0, turning a cuboid into a wedge, would make OpenFOAM crash so a very small number will do in case this breaks it
-        ///ceil(cellResolutionsPerUnit[0] * diameterHeights[face.zIndexAtGeneration][0]), // {side-to-side radius-wise,
-        ///ceil(cellResolutionsPerUnit[1] * diameterHeights[face.zIndexAtGeneration][1]), //  vertical,
-        ///ceil(cellResolutionsPerUnit[2] * diameterHeights[face.zIndexAtGeneration][0]), //  in-out}
+        face,
+        face.scaleXY(0),
         cellResolutionsPerUnit[0],
-        ceil(cellResolutionsPerUnit[1] * diameterHeights[face.zIndexAtGeneration+1][1] * diameterHeights[face.zIndexAtGeneration+1][3]),
-        cellResolutionsPerUnit[2],
-        Vector3(cellResolutionDistribution)
+        ceil(cellResolutionsPerUnit[1] * structureData[face.zIndexAtGeneration].height * structureData[face.zIndexAtGeneration].verticalDensityFactor),
+        cellResolutionsPerUnit[2] * structureData[face.zIndexAtGeneration].horizontalCellCountFactor,
+        vector3(cellResolutionDistribution)
       ));
     }
 
-    for (quad face : topSideFaces) {
+    for (quad face : atmoSideFaces) {
       cells.push_back(cuboid(
-        face, // 1 first instead of 0 because OpenFOAM uses a normalized vector between point 0 and the points around it, which would have a distance of 0 if the 0-scaled face was first
-        face.scaleXY(0), // I have a feeling that a scaling factor of 0, turning a cuboid into a wedge, would make OpenFOAM crash so a very small number will do in case this breaks it
-        ///ceil(cellResolutionsPerUnit[0] * diameterHeights[face.zIndexAtGeneration][0]), // {side-to-side radius-wise,
-        ///ceil(cellResolutionsPerUnit[1] * diameterHeights[face.zIndexAtGeneration][1]), //  vertical,
-        ///ceil(cellResolutionsPerUnit[2] * diameterHeights[face.zIndexAtGeneration][0]), //  in-out}
+        face,
+        face.scaleXY(1/structureData[face.zIndexAtGeneration].horizontalCellCountFactor),
         cellResolutionsPerUnit[0],
-        ceil(cellResolutionsPerUnit[1] * diameterHeights[face.zIndexAtGeneration+1][1] * diameterHeights[face.zIndexAtGeneration+1][3]),
+        ceil(cellResolutionsPerUnit[1] * structureData[face.zIndexAtGeneration].height * structureData[face.zIndexAtGeneration].verticalDensityFactor),
+        cellResolutionsPerUnit[2] * (structureData[face.zIndexAtGeneration].horizontalCellCountFactor-1) * structureData[face.zIndexAtGeneration].horizontallyExtendedCellsResolutionFactor,
+        vector3(cellResolutionDistribution)
+      ));
+    }
+
+    for (quad face : atmoSideFaces) {
+      cells.push_back(cuboid(
+        face.scaleXY(1/structureData[face.zIndexAtGeneration].horizontalCellCountFactor),
+        face.scaleXY(0),
+        cellResolutionsPerUnit[0],
+        ceil(cellResolutionsPerUnit[1] * structureData[face.zIndexAtGeneration].height * structureData[face.zIndexAtGeneration].verticalDensityFactor),
         cellResolutionsPerUnit[2],
-        Vector3(cellResolutionDistribution)
+        vector3(cellResolutionDistribution)
       ));
     }
 
     // since OpenFOAM uses a list of points to construct faces...
     // get all unique vectors used and enumerate them
 
-    vector<Vector3> points = {};
+    vector<vector3> points = {};
 
-    for (quad face : edgeFaces) {
+    for (quad face : nozzleFaces) {
       addPointsToList(face.p0, points);
       addPointsToList(face.p1, points);
       addPointsToList(face.p2, points);
       addPointsToList(face.p3, points);
     }
 
-    /*for (quad face : topSideFaces) {
-      addPointsToList(face.p0, points);
-      addPointsToList(face.p1, points);
-      addPointsToList(face.p2, points);
-      addPointsToList(face.p3, points);
-    }*/
-
-    for (quad face : bottomFaces) {
+    for (quad face : chamberAllFaces) {
       addPointsToList(face.p0, points);
       addPointsToList(face.p1, points);
       addPointsToList(face.p2, points);
       addPointsToList(face.p3, points);
     }
 
-    for (quad face : topFaces) {
+    for (quad face : atmoAllFaces) {
       addPointsToList(face.p0, points);
       addPointsToList(face.p1, points);
       addPointsToList(face.p2, points);
@@ -312,36 +387,25 @@ class ModelCreator {
       points[i].num = i;
     }
 
-    for (int i = 0; i < edgeFaces.size(); i++) {
-      edgeFaces[i].p0.num = getNum(edgeFaces[i].p0, points);
-      edgeFaces[i].p1.num = getNum(edgeFaces[i].p1, points);
-      edgeFaces[i].p2.num = getNum(edgeFaces[i].p2, points);
-      edgeFaces[i].p3.num = getNum(edgeFaces[i].p3, points);
-      //cout << quadToString(edgeFaces[i]) + "\n";
+    for (int i = 0; i < nozzleFaces.size(); i++) {
+      nozzleFaces[i].p0.num = getNum(nozzleFaces[i].p0, points);
+      nozzleFaces[i].p1.num = getNum(nozzleFaces[i].p1, points);
+      nozzleFaces[i].p2.num = getNum(nozzleFaces[i].p2, points);
+      nozzleFaces[i].p3.num = getNum(nozzleFaces[i].p3, points);
     }
 
-    /*for (int i = 0; i < topSideFaces.size(); i++) {
-      topSideFaces[i].p0.num = getNum(topSideFaces[i].p0, points);
-      topSideFaces[i].p1.num = getNum(topSideFaces[i].p1, points);
-      topSideFaces[i].p2.num = getNum(topSideFaces[i].p2, points);
-      topSideFaces[i].p3.num = getNum(topSideFaces[i].p3, points);
-      //cout << quadToString(edgeFaces[i]) + "\n";
-    }*/
-
-    for (int i = 0; i < bottomFaces.size(); i++) {
-      bottomFaces[i].p0.num = getNum(bottomFaces[i].p0, points);
-      bottomFaces[i].p1.num = getNum(bottomFaces[i].p1, points);
-      bottomFaces[i].p2.num = getNum(bottomFaces[i].p2, points);
-      bottomFaces[i].p3.num = getNum(bottomFaces[i].p3, points);
-      //cout << quadToString(edgeFaces[i]) + "\n";
+    for (int i = 0; i < chamberAllFaces.size(); i++) {
+      chamberAllFaces[i].p0.num = getNum(chamberAllFaces[i].p0, points);
+      chamberAllFaces[i].p1.num = getNum(chamberAllFaces[i].p1, points);
+      chamberAllFaces[i].p2.num = getNum(chamberAllFaces[i].p2, points);
+      chamberAllFaces[i].p3.num = getNum(chamberAllFaces[i].p3, points);
     }
 
-    for (int i = 0; i < topFaces.size(); i++) {
-      topFaces[i].p0.num = getNum(topFaces[i].p0, points);
-      topFaces[i].p1.num = getNum(topFaces[i].p1, points);
-      topFaces[i].p2.num = getNum(topFaces[i].p2, points);
-      topFaces[i].p3.num = getNum(topFaces[i].p3, points);
-      //cout << quadToString(edgeFaces[i]) + "\n";
+    for (int i = 0; i < atmoAllFaces.size(); i++) {
+      atmoAllFaces[i].p0.num = getNum(atmoAllFaces[i].p0, points);
+      atmoAllFaces[i].p1.num = getNum(atmoAllFaces[i].p1, points);
+      atmoAllFaces[i].p2.num = getNum(atmoAllFaces[i].p2, points);
+      atmoAllFaces[i].p3.num = getNum(atmoAllFaces[i].p3, points);
     }
 
     for (int i = 0; i < cells.size(); i++) {
@@ -366,45 +430,36 @@ class ModelCreator {
       atmoCells[i].p7.num = getNum(atmoCells[i].p7, points);
     }
 
-    vector<quad> empty = {};
+    //vector<quad> empty = {};
 
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "vertices", vector3ListToString(points));
-    FileEditor::addTextToSectionInFile("/system/blockMeshDict", "inlet", boundaryToString("patch", bottomFaces));
-    //FileEditor::addTextToSectionInFile("/system/blockMeshDict", "inlet", boundaryToString("patch", empty));
-    FileEditor::addTextToSectionInFile("/system/blockMeshDict", "outlet", boundaryToString("patch", topFaces));
-    /*for (quad q : edgeFaces) {
-      cout << vector3ToString(q.p0) + "\n";
-      cout << vector3ToString(q.p1) + "\n";
-      cout << vector3ToString(q.p2) + "\n";
-      cout << vector3ToString(q.p3) + "\n";
-      cout << "--------------\n";
-    }
-    for (cuboid c : cells) {
-      cout << vector3ToString(c.p0) + "\n";
-      cout << vector3ToString(c.p1) + "\n";
-      cout << vector3ToString(c.p2) + "\n";
-      cout << vector3ToString(c.p3) + "\n";
-      cout << vector3ToString(c.p4) + "\n";
-      cout << vector3ToString(c.p5) + "\n";
-      cout << vector3ToString(c.p6) + "\n";
-      cout << vector3ToString(c.p7) + "\n";
-      cout << "--------------\n";
-    }*/
+    FileEditor::addTextToSectionInFile("/system/blockMeshDict", "inlet", boundaryToString("patch", chamberAllFaces));
+    FileEditor::addTextToSectionInFile("/system/blockMeshDict", "outlet", boundaryToString("patch", atmoAllFaces));
     FileEditor::addTextToSectionInFile("/system/blockMeshDict", "blocks", cuboidListToString(cells));
-    //FileEditor::addTextToSectionInFile("/system/blockMeshDict", "atmo", cuboidListToString(atmoCells));
-    FileEditor::addTextToSectionInFile("/system/blockMeshDict", "sides", boundaryToString("wall", edgeFaces));
-    //FileEditor::addTextToSectionInFile("/system/blockMeshDict", "atmoedge", boundaryToString("noSlip", topSideFaces));
+    FileEditor::addTextToSectionInFile("/system/blockMeshDict", "sides", boundaryToString("wall", nozzleFaces));
+    
     
 
   }
 
-  static string vector3ToString(Vector3 v) {
+  //static void calculateIsp() {
+  //  FileEditor::writeOverFile("/areas", quadListToString_Area(atmoAllFaces));
+  //  string maxTimestampFilename = FileEditor::getHighestNumberFilename("");
+  //  vector<double> rho = FileEditor::splitStringIntoDoublesByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/rho", "outlet"));
+  //  vector<vector<double>> U = FileEditor::splitStringIntoVectorsByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/U", "outlet"));
+  //  for (int i = 0; i < rho.size(); i++) {
+  //
+  //  }
+  //  //FileEditor::splitString(FileEditor::getSectionOfFile("/"))
+  //}
+
+  static string vector3ToString(vector3 v) {
     return "(" + to_string(v.x) + " " + to_string(v.y) + " " + to_string(v.z) + ")";
   }
 
-  static string vector3ListToString(vector<Vector3> vectors) {
+  static string vector3ListToString(vector<vector3> vectors) {
     string output = "";
-    for (Vector3 v : vectors) {
+    for (vector3 v : vectors) {
       output += vector3ToString(v) + "";
       //cout << output + "\n";
     }
@@ -423,6 +478,18 @@ class ModelCreator {
     string output = "";
     for (quad q  : quads) {
       output += quadToString(q) + " ";
+    }
+    return output;
+  }
+
+  static string quadToString_Area(quad q) {
+    return to_string(q.getArea());
+  }
+
+  static string quadListToString_Area(vector<quad> quads) {
+    string output = "";
+    for (quad q  : quads) {
+      output += quadToString_Area(q) + " ";
     }
     return output;
   }
@@ -453,5 +520,4 @@ class ModelCreator {
     }
     return cellsString;
   }
-
 };

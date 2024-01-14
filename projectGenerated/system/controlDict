@@ -14,6 +14,8 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+libs            ("libisothermalFilm.so" "libDSMC.so" "libisothermalFluid.so" "libODE.so" "liblagrangian.so" "libOSspecific.o" "liblagrangianFunctionObjects.so" "libOpenFOAM.so" "liblagrangianParcel.so" "libVoFCavitation.so" "liblaminarFlameSpeedModels.so" "libVoFClouds.so" "libmeshToMeshTopoChanger.so" "libVoFSolidificationMeltingSource.so" "libmeshTools.so" "libVoFSolver.so" "libmolecularMeasurements.so" "libVoFTurbulenceDamping.so" "libmolecule.so" "libXiFluid.so" "libmomentumTransportModels.so" "libXiIgnition.so" "libmovingMesh.so" "libatmosphericModels.so" "libmulticomponentFluid.so" "libbarotropicCompressibilityModel.so" "libmulticomponentThermophysicalModels.so" "libblockMesh.so" "libmultiphaseEuler.so" "libchemistryModel.so" "libmultiphaseEulerFoamFunctionObjects.so" "libcombustionModels.so" "libmultiphaseEulerFoamFvModels.so" "libcompressibleCavitationModels.so" "libmultiphaseMomentumTransportModels.so" "libcompressibleInterfaceProperties.so" "libmultiphaseProperties.so" "libcompressibleMomentumTransportModels.so" "libmultiphaseReactions.so" "libcompressibleMultiphaseVoF.so" "libmultiphaseSystems.so" "libcompressibleTwoPhases.so" "libmultiphaseThermophysicalTransportModels.so" "libcompressibleVoF.so" "libmultiphaseVoFSolver.so" "libcompressibleVoFCavitation.so" "libpairPatchAgglomeration.so" "libcompressibleVoFTurbulenceDamping.so" "libparallel.so" "libconversion.so" "libphaseCompressibleMomentumTransportModels.so" "libcoupledThermophysicalTransportModels.so" "libphaseFluidMulticomponentThermophysicalTransportModels.so" "libdecompositionMethods.so" "libphaseFluidThermophysicalTransportModels.so" "libdistributed.so" "libphaseIncompressibleMomentumTransportModels.so" "libdynamicMesh.so" "libphaseSystem.so" "libeulerianInterfacialCompositionModels.so" "libphysicalProperties.so" "libeulerianInterfacialModels.so" "libpotential.so" "libextrude2DMesh.so" "libradiationModels.so" "libextrudeModel.so" "librandomProcesses.so" "libfieldFunctionObjects.so" "librenumberMethods.so" "libfileFormats.so" "librigidBodyDynamics.so" "libfilm.so" "librigidBodyMeshMotion.so" "libfilmCloudTransfer.so" "librigidBodyState.so" "libfilmCompressibleMomentumTransportModels.so" "libsampling.so" "libfilmThermophysicalTransportModels.so" "libsaturationModels.so" "libfilmVoFTransfer.so" "libscotch.so" "libfiniteVolume.so" "libscotchDecomp.so" "libfluid.so" "libscotcherr.so" "libfluidMulticomponentThermophysicalTransportModels.so" "libscotcherrexit.so" "libfluidSolver.so" "libscotchmetis.so" "libfluidThermoThermophysicalTransportModels.so" "libshockFluid.so" "libfluidThermophysicalModels.so" "libsixDoFRigidBodyMotion.so" "libfluidThermophysicalTransportModel.so" "libsixDoFRigidBodyState.so" "libfoamToVTK.so" "libsnappyHexMesh.so" "libforces.so" "libsolid.so" "libfunctions.so" "libsolidDisplacement.so" "libfvConstraints.so" "libsolidDisplacementThermo.so" "libfvMeshDistributors.so" "libsolidParticle.so" "libfvMeshMovers.so" "libsolidThermo.so" "libfvMeshStitchers.so" "libsolidThermophysicalTransportModels.so" "libfvMeshTopoChangers.so" "libsolverFunctionObjects.so" "libfvModels.so" "libspecie.so" "libfvMotionSolvers.so" "libspecieTransfer.so" "libgenericPatchFields.so" "libsurfMesh.so" "libgenericPatches.so" "libthermophysicalProperties.so" "libincompressibleCavitationModels.so" "libthermophysicalTransportModel.so" "libincompressibleDenseParticleFluid.so" "libtriSurface.so" "libincompressibleDriftFlux.so" "libtwoPhaseMixture.so" "libincompressibleDriftFluxRelativeVelocityModels.so" "libtwoPhaseProperties.so" "libincompressibleDriftFluxViscosityModel.so" "libtwoPhaseSolver.so" "libincompressibleFluid.so" "libtwoPhaseVoFSolver.so" "libincompressibleMomentumTransportModels.so" "libuserd-foam.so" "libincompressibleMultiphaseVoF.so" "libutilityFunctionObjects.so" "libincompressibleTwoPhases.so" "libwaves.so" "libincompressibleVoF.so" "libinterfaceCompression.so" "libinterfaceProperties.so" );
+
 application     foamRun;
 
 solver          shockFluid;
@@ -24,13 +26,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         1e-04;        
+endTime         5e-04;        
 
 deltaT          1e-08;
 
 writeControl    runTime;
 
-writeInterval   1e-06;
+writeInterval   1e-05;
 
 cycleWrite      0;
 
@@ -55,43 +57,153 @@ functions {
     type			      MachNo;
     libs			      ("libfieldFunctionObjects.so");
     writeControl	  runTime;
-    writeInterval	  1e-06;
+    writeInterval	  1e-05;
   }
+  //flux1
+  //{
+  //  // Mandatory entries (unmodifiable)
+  //  type            patchFlowRate;
+  //  libs			      ("libfieldFunctionObjects.so");
+  //  writeControl	  runTime;
+  //  writeInterval	  1e-06;
+  //}
   Flux1 {
     type			      surfaceFieldValue;
     libs			      ("libfieldFunctionObjects.so");
-    fields          (a);
-    operation       sum;
+    fields          (U);
+    operation       areaAverage;
     regionType      patch;  // if swak doesn't work, add a c++ script for +z mass flow rate instead
     name            outlet;
     writeFields     true;
     surfaceFormat   none;
     writeControl	  runTime;
-    writeInterval	  1e-06;
+    writeInterval	  1e-05;
   }
+  computeFlowRate
+	{
+	    libs        ("libutilityFunctionObjects.so");
+	    libs        ("libfieldFunctionObjects.so");
+
+	    type coded;
+	    name compute_Power;
+	    outputControl  writeTime;
+
+	    codeWrite
+	    #{
+        //const volScalarField rho = mesh().boundaryMesh()//.lookupObject<volScalarField>("rho");
+        //const volVectorField U = mesh().boundaryMesh()//.lookupObject<volVectorField>("U");
+        //forAll(mesh.boundaryMesh(), patchI) {
+        //  const scalarField A = mesh().boundaryMesh().faceAreas();
+        //}
+        //
+		    //auto FlowRate = A; //U.component(2)*rho;
+		    //FlowRate.write();
+
+
+        //using namespace std;
+
+        label ibcFace = 10000; // this will change if the simulation resolution is changed!
+
+        scalar xbc[ibcFace];
+        scalar ybc[ibcFace];
+        scalar zbc[ibcFace];
+
+        FILE *f = fopen("faceAreas", "w");
+
+        forAll(mesh().boundaryMesh(), patchI) {
+          forAll(mesh().boundaryMesh()[patchI].faceAreas(), faceI) {
+            xbc[faceI] = mesh().boundaryMesh()[patchI].faceAreas()[faceI].x();
+            ybc[faceI] = mesh().boundaryMesh()[patchI].faceAreas()[faceI].y();
+            zbc[faceI] = mesh().boundaryMesh()[patchI].faceAreas()[faceI].z();
+            //std::cout << std::to_string(zbc[faceI]) + "\n";
+            if (patchI == 1) {
+              fprintf(f, "%.17g\n", std::sqrt(xbc[faceI]*xbc[faceI] + ybc[faceI]*ybc[faceI] + zbc[faceI]*zbc[faceI]));
+            }
+          }
+        }
+
+        fclose(f);
+
+        //zbc.write();
+
+
+
+
+        //std::ofstream o_file_bc;
+        //o_file_bc.open("Boundary_Face_Vectors.txt");
+        //if(o_file_bc.is_open()) {
+        //  for(label i=0;i<=ibcFace-1;i++) { 
+        //    o_file_bc<<xbc[i]<<" "<<ybc[i]<<" "<<zbc[i]<<" "<<endl;
+        //  } 
+        //}
+
+        //Foam::tmp<Foam::scalarField> Foam::cellQuality::cellSurfaceArea() const {
+        //  tmp<scalarField> tresult (new scalarField (mesh_.nCells(), 0.0));
+        //  scalarField& result = tresult.ref();
+        //  scalar sumCellArea;
+        //  forAll(result,celli) {
+        //  const labelList& cellFaces = mesh_.cells()[celli]; //with this line, I expect to access the faces belonging to cell under consideration.
+        //  const vectorField& areas = mesh_.faceAreas();
+        //  forAll(cellFaces,facei) {
+        //    sumCellArea=0;
+        //    sumCellArea+=mag(areas[facei]);
+        //  }
+        //  result[celli]=sumCellArea;
+        //  }
+        //  return tresult;
+        //}
+	    #};
+	}
+  //outletMassFlowYourPatch {
+  //    type            surfaceFieldValue;
+  //    functionObjectLibs ("libfieldFunctionObjects.so");
+  //    enabled         true;
+  //    writeControl    timeStep;
+  //    writeInterval   100;
+  //    log             true;
+  //    writeFields     false;
+  //    regionType      patch;
+  //    name            outlet;
+  //    operation       sum;
+  //    fields
+  //    (
+  //      phi
+  //    );
+  //}
+  //massflow
+  //{
+  //  type            faceSource;
+  //  functionObjectLibs ("libfieldFunctionObjects.so");
+  //  enabled         true;
+  //  outputControl    timeStep;
+  //  log             true;
+  //  valueOutput     false;
+  //  source          patch;
+  //  sourceName      yourpatchname;
+  //  operation       sum;
+  //  fields
+  //  (
+  //      phi
+  //  );
+  //}
+  //centers {
+  //  type            writeCellCentres;
+  //  libs			      ("libfieldFunctionObjects.so");
+  //  writeControl	  runTime;
+  //  writeInterval	  1e-06;
+  //}
+  //fluxSummary1
+  //{
+  //  // Mandatory entries (unmodifiable)
+  //  type            fluxSummary;
+  //  libs			      ("libfieldFunctionObjects.so");
+//
+  //  // Mandatory entries (runtime modifiable)
+  //  mode            cellZoneAndDirection;
+  //  cellZoneAndDirection
+  //  (
+  //      (porosity (1 0 0))
+  //  );
+  //}
 }
-//surfaceFieldValueFunctions {
-//  flowRate {
-//    #includeFunc    patchFlowRate(patch=outlet)
-//    libs            ("libsampling.so" "libfieldFunctionObjects.so");
-//    type            patchFlowRate;
-//    patch           outlet;
-//    writeObject
-//    writeControl	  runTime;
-//    writeInterval	  1e-06;
-//  }
-//}
-  //flowBeforeSet
-  //  {
-  //      type swakExpression;
-  //      valueType surface;
-	//      surface outer;
-  //      expression "rho*U.z"; 
-  //      accumulations (
-  //          sum
-  //      );
-  //      verbose true;
-  //  }
-
-
 // ************************************************************************* //

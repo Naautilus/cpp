@@ -37,131 +37,148 @@ class structureLayer {
   }
 };
 
+enum endType {bottom, top};
+
+class vector3 {
+  public:
+  double x, y, z;
+  int num;
+  vector3(){}
+  vector3(double x_, double y_, double z_) {
+    x = x_;
+    y = y_;
+    z = z_;
+    num = -1;
+  }
+  vector3(vector<double> v) {
+    x = v[0];
+    y = v[1];
+    z = v[2];
+    num = -1;
+  }
+  vector3 scaleXY(double scalingFactor) {
+    return vector3(x * scalingFactor, y * scalingFactor, z);
+  }
+  bool isEqual(vector3 v) {
+    double epsilon = 0.000001;
+    if ((v.x - x)*(v.x - x) + (v.y - y)*(v.y - y) + (v.z - z)*(v.z - z) < epsilon) {
+      return true;
+    }
+    return false;
+  }
+  vector3 operator+ (vector3 v) {
+    return vector3(x+v.x, y+v.y, z+v.z);
+  }
+  vector3 operator* (double m) {
+    return vector3(x*m, y*m, z*m);
+  }
+};
+class quad {
+  private:
+  double calculateArea() {
+    return calculateTriangleArea(p1, p0, p3) + calculateTriangleArea(p1, p2, p3);
+  }
+    vector3 crossProduct(const vector3 &v1, const vector3 &v2) {
+    return vector3((v1.y * v2.z) - (v1.z * v2.y),
+                  (v1.z * v2.x) - (v1.x * v2.z),
+                  (v1.x * v2.y) - (v1.y * v2.x));
+  }
+  // Function to calculate the magnitude of a vector
+  double magnitude(const vector3 &v) {
+      return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+  }
+  // Function to calculate the area of a triangle in 3D space
+  double calculateTriangleArea(const vector3 &v1, const vector3 &v2, const vector3 &v3) {
+    // Calculate two vectors representing two sides of the triangle
+    vector3 side1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+    vector3 side2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
+    // Calculate the cross product of the two vectors
+    vector3 cross = crossProduct(side1, side2);
+    // Calculate the magnitude of the cross product
+    double area = 0.5 * magnitude(cross);
+    return area;
+  }
+  public:
+  vector3 p0, p1, p2, p3;
+  int zIndexAtGeneration;
+  double area;
+  quad(vector3 p0_, vector3 p1_, vector3 p2_, vector3 p3_, int z) {
+    p0 = p0_;
+    p1 = p1_;
+    p2 = p2_;
+    p3 = p3_;
+    zIndexAtGeneration = z;
+    area = calculateArea();
+    cout << "quad area calculated to be " + to_string(area) + "\n";
+  }
+  quad scaleXY(double scalingFactor) {
+    return quad(
+      p0.scaleXY(scalingFactor),
+      p1.scaleXY(scalingFactor),
+      p2.scaleXY(scalingFactor),
+      p3.scaleXY(scalingFactor),
+      zIndexAtGeneration
+    );
+  }
+  double getArea() {
+    return area;
+  }
+};
+struct cuboid {
+  vector3 p0, p1, p2, p3, p4, p5, p6, p7, cellGrading;
+  double p, T, U;
+  int cellsX, cellsY, cellsZ = 0;
+  cuboid(vector3 p0_, vector3 p1_, vector3 p2_, vector3 p3_, vector3 p4_, vector3 p5_, vector3 p6_, vector3 p7_, int cellsX_, int cellsY_, int cellsZ_, vector3 cellGrading_, double p_, double T_, double U_) {
+    p0 = p0_;
+    p1 = p1_;
+    p2 = p2_;
+    p3 = p3_;
+    p4 = p4_;
+    p5 = p5_;
+    p6 = p6_;
+    p7 = p7_;
+    cellsX = cellsX_;
+    cellsY = cellsY_;
+    cellsZ = cellsZ_;
+    cellGrading = cellGrading_;
+  }
+  cuboid(quad q0, quad q1, int cellsX_, int cellsY_, int cellsZ_, vector3 cellGrading_) {
+    p0 = q0.p0;
+    p1 = q0.p1;
+    p2 = q0.p2;
+    p3 = q0.p3;
+    p4 = q1.p0;
+    p5 = q1.p1;
+    p6 = q1.p2;
+    p7 = q1.p3;
+    cellsX = cellsX_;
+    cellsY = cellsY_;
+    cellsZ = cellsZ_;
+    cellGrading = cellGrading_;
+  }
+};
+
+static vector<quad> nozzleFaces, chamberSideFaces, chamberAllFaces, atmoAllFaces, atmoSideFaces, atmoBottomFaces;
+static vector<cuboid> cells, atmoCells;
+static vector<double> quadAreas;
+
 
 class ModelCreator {
+  
   ModelCreator() = delete;
 
   public:
 
-  enum endType {bottom, top};
+  //static vector<quad> nozzleFaces = {};
+  //static vector<quad> chamberSideFaces = {};
+  //static vector<quad> chamberAllFaces = {};
+  //static vector<quad> atmoAllFaces = {};
+  //static vector<quad> atmoSideFaces = {};
+  //static vector<quad> atmoBottomFaces = {};
+  //static vector<cuboid> cells = {};
+  //static vector<cuboid> atmoCells = {};
 
-  class vector3 {
-    public:
-    double x, y, z;
-    int num;
-    vector3(){}
-    vector3(double x_, double y_, double z_) {
-      x = x_;
-      y = y_;
-      z = z_;
-      num = -1;
-    }
-    vector3(vector<double> v) {
-      x = v[0];
-      y = v[1];
-      z = v[2];
-      num = -1;
-    }
-    vector3 scaleXY(double scalingFactor) {
-      return vector3(x * scalingFactor, y * scalingFactor, z);
-    }
-    bool isEqual(vector3 v) {
-      double epsilon = 0.000001;
-      if ((v.x - x)*(v.x - x) + (v.y - y)*(v.y - y) + (v.z - z)*(v.z - z) < epsilon) {
-        return true;
-      }
-      return false;
-    }
-    vector3 operator+ (vector3 v) {
-      return vector3(x+v.x, y+v.y, z+v.z);
-    }
-    vector3 operator* (double m) {
-      return vector3(x*m, y*m, z*m);
-    }
-  };
-
-  class quad {
-    public:
-    vector3 p0, p1, p2, p3;
-    int zIndexAtGeneration;
-    quad(vector3 p0_, vector3 p1_, vector3 p2_, vector3 p3_, int z) {
-      p0 = p0_;
-      p1 = p1_;
-      p2 = p2_;
-      p3 = p3_;
-      zIndexAtGeneration = z;
-    }
-    quad scaleXY(double scalingFactor) {
-      return quad(
-        p0.scaleXY(scalingFactor),
-        p1.scaleXY(scalingFactor),
-        p2.scaleXY(scalingFactor),
-        p3.scaleXY(scalingFactor),
-        zIndexAtGeneration
-      );
-    }
-    double getArea() {
-      return calculateTriangleArea(p1, p0, p3) + calculateTriangleArea(p1, p2, p3);
-    }
-    vector3 crossProduct(const vector3 &v1, const vector3 &v2) {
-      return vector3((v1.y * v2.z) - (v1.z * v2.y),
-                    (v1.z * v2.x) - (v1.x * v2.z),
-                    (v1.x * v2.y) - (v1.y * v2.x));
-    }
-
-    // Function to calculate the magnitude of a vector
-    double magnitude(const vector3 &v) {
-        return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    }
-    // Function to calculate the area of a triangle in 3D space
-    double calculateTriangleArea(const vector3 &v1, const vector3 &v2, const vector3 &v3) {
-      // Calculate two vectors representing two sides of the triangle
-      vector3 side1(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
-      vector3 side2(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
-
-      // Calculate the cross product of the two vectors
-      vector3 cross = crossProduct(side1, side2);
-
-      // Calculate the magnitude of the cross product
-      double area = 0.5 * magnitude(cross);
-
-      return area;
-    }
-  };
-
-  struct cuboid {
-    vector3 p0, p1, p2, p3, p4, p5, p6, p7, cellGrading;
-    double p, T, U;
-    int cellsX, cellsY, cellsZ = 0;
-    cuboid(vector3 p0_, vector3 p1_, vector3 p2_, vector3 p3_, vector3 p4_, vector3 p5_, vector3 p6_, vector3 p7_, int cellsX_, int cellsY_, int cellsZ_, vector3 cellGrading_, double p_, double T_, double U_) {
-      p0 = p0_;
-      p1 = p1_;
-      p2 = p2_;
-      p3 = p3_;
-      p4 = p4_;
-      p5 = p5_;
-      p6 = p6_;
-      p7 = p7_;
-      cellsX = cellsX_;
-      cellsY = cellsY_;
-      cellsZ = cellsZ_;
-      cellGrading = cellGrading_;
-    }
-    cuboid(quad q0, quad q1, int cellsX_, int cellsY_, int cellsZ_, vector3 cellGrading_) {
-      p0 = q0.p0;
-      p1 = q0.p1;
-      p2 = q0.p2;
-      p3 = q0.p3;
-      p4 = q1.p0;
-      p5 = q1.p1;
-      p6 = q1.p2;
-      p7 = q1.p3;
-      cellsX = cellsX_;
-      cellsY = cellsY_;
-      cellsZ = cellsZ_;
-      cellGrading = cellGrading_;
-    }
-  };
+  
 
   const double ATMOSPHERE_p = 14;
   const double ATMOSPHERE_T = 300; // NOT ACTIVE
@@ -205,15 +222,6 @@ class ModelCreator {
   static void createModel(vector<structureLayer> structureData, int radialPointCount, vector<double> &cellResolutionsPerUnit, vector<double> &cellResolutionDistribution) {
 
     // generate a list of edge faces, or "walls" in the simulation
-
-    vector<quad> nozzleFaces;
-    vector<quad> chamberSideFaces;
-    vector<quad> chamberAllFaces;
-    vector<quad> atmoAllFaces;
-    vector<quad> atmoSideFaces;
-    vector<quad> atmoBottomFaces;
-    vector<cuboid> cells;
-    vector<cuboid> atmoCells;
 
     cout << "structureData size: " + to_string(structureData.size()) + "\n" << endl;
     for (int zIndex = 0; zIndex <= structureData.size() - 1; zIndex++) {
@@ -442,16 +450,36 @@ class ModelCreator {
 
   }
 
-  //static void calculateIsp() {
-  //  FileEditor::writeOverFile("/areas", quadListToString_Area(atmoAllFaces));
-  //  string maxTimestampFilename = FileEditor::getHighestNumberFilename("");
-  //  vector<double> rho = FileEditor::splitStringIntoDoublesByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/rho", "outlet"));
-  //  vector<vector<double>> U = FileEditor::splitStringIntoVectorsByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/U", "outlet"));
-  //  for (int i = 0; i < rho.size(); i++) {
-  //
-  //  }
-  //  //FileEditor::splitString(FileEditor::getSectionOfFile("/"))
-  //}
+  static double calculateIsp() {
+    //FileEditor::writeOverFile("/areas", quadListToString_Area(atmoAllFaces));
+    quadAreas = quadAreaList(atmoAllFaces);
+    string maxTimestampFilename = FileEditor::getHighestNumberFilename("");
+    vector<double> rho = FileEditor::splitStringIntoDoublesByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/rho", "outlet"));
+    vector<vector<double>> U = FileEditor::splitStringIntoVectorsByNewline(FileEditor::getSectionOfFile(FileEditor::getHighestNumberFilename("") + "/U", "outlet"));
+    string test = FileEditor::fileToString("/faceAreas");
+    vector<double> A = FileEditor::splitStringIntoDoublesByNewline(FileEditor::fileToString("/faceAreas"));
+    double flowRateSum;
+    double areaSum;
+    for (int i = 0; i < rho.size(); i++) {
+      //if (atmoAllFaces[i].getArea() < 1000 & atmoAllFaces.getArea())
+        double flowRate = A[i]*rho[i]*(U[i][0]*U[i][0] + U[i][1]*U[i][1] + U[i][2]*U[i][2]); // sqrt(U)^2
+        double flowRateAdjustmentConstant = 1; // 9.81*60/5116.3;
+        flowRate *= flowRateAdjustmentConstant;
+        flowRateSum += flowRate;
+        double area = A[i];
+        areaSum += area;
+        cout << to_string(i) + ": points: " + /*"(" + vector3ToString(atmoAllFaces[i].p0) + " " + vector3ToString(atmoAllFaces[i].p1) + " " + vector3ToString(atmoAllFaces[i].p2) + " " + vector3ToString(atmoAllFaces[i].p3) +*/ ") area: " + to_string(area) + ", rho: " + to_string(rho[i]) + ", U.z: " + to_string(U[i][0]) + ", flow rate * velocity: " + to_string(flowRate) + "\n";
+        
+    }
+    cout << "flowRateSum: " + to_string(flowRateSum) + "\n";
+    cout << "areaSum: " + to_string(areaSum) + "\n";
+    double averageExhaustVelocity = flowRateSum/areaSum;
+    cout << "averageExhaustVelocity: " + to_string(averageExhaustVelocity) + "\n";
+    cout << to_string(flowRateSum) + "\n";
+    return averageExhaustVelocity;
+
+    //FileEditor::splitString(FileEditor::getSectionOfFile("/"))
+  }
 
   static string vector3ToString(vector3 v) {
     return "(" + to_string(v.x) + " " + to_string(v.y) + " " + to_string(v.z) + ")";
@@ -490,6 +518,14 @@ class ModelCreator {
     string output = "";
     for (quad q  : quads) {
       output += quadToString_Area(q) + " ";
+    }
+    return output;
+  }
+
+  static vector<double> quadAreaList(vector<quad> quads) {
+    vector<double> output;
+    for (quad q : quads) {
+      output.push_back(q.getArea());
     }
     return output;
   }

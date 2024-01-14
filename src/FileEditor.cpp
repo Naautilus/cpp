@@ -87,6 +87,19 @@ class FileEditor {
     outputFile.close();
   }
 
+  static string fileToString(const string &filename_) {
+    // Open the input file
+    string filename = codeDir + "/projectGenerated" + filename_;
+    ifstream inputFile(filename);
+    if (!inputFile.is_open()) {
+        cerr << "Error opening file: " << filename << endl;
+        return "";
+    }
+    // Read the content of the file into a string
+    string fileContent((istreambuf_iterator<char>(inputFile)), istreambuf_iterator<char>());
+    return fileContent;
+  }
+
   static void writeOverFile(const string &filename_, const string &text) {
     string filename = codeDir + "/projectGenerated" + filename_;
     ofstream outputFile(filename, std::ofstream::trunc);
@@ -148,7 +161,7 @@ class FileEditor {
       if(fileContent.substr(endPos, 1) == "{") parenthesesCount++;
       if(fileContent.substr(endPos, 1) == ")") parenthesesCount--;
       if(fileContent.substr(endPos, 1) == "}") parenthesesCount--;
-      cout << "|" + fileContent.substr(endPos, 1) + to_string(parenthesesCount) + (previouslyGreaterThanZero ? "!" : ".");
+      //cout << "|" + fileContent.substr(endPos, 1) + to_string(parenthesesCount) + (previouslyGreaterThanZero ? "!" : ".");
       endPos++;
     }
 

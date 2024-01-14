@@ -1,0 +1,6 @@
+# dynamicCode:
+# SHA1 = c92121a83e9f397179ef59322f976a6a75104c3e
+
+SOURCE += psiThermoTemplate.C
+
+LIB = $(PWD)/../platforms/$(WM_OPTIONS)/lib/libhePsiThermo_pureMixture_sutherland_hPolynomial_perfectGas_specie___sensibleInternalEnergy____c92121a83e9f397179ef59322f976a6a75104c3e

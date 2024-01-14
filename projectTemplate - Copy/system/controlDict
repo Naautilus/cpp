@@ -71,6 +71,31 @@ functions {
     writeControl	  runTime;
     writeInterval	  1e-06;
   }
+  //massflow
+  //  {
+  //      type            faceSource;
+  //      functionObjectLibs ("libfieldFunctionObjects.so");
+  //      enabled         true;
+  //      outputControl    timeStep;
+  //      log             true;
+  //      valueOutput     false;
+  //      source          patch;
+  //      sourceName      yourpatchname;
+  //      operation       sum;
+//
+  //      fields
+  //      (
+  //          phi
+  //      );
+  //  }
+  flux1
+  {
+    // Mandatory entries (unmodifiable)
+    type            flux;
+    libs            (fieldFunctionObjects);
+    writeControl	  runTime;
+    writeInterval	  1e-06;
+  }
   //flowBeforeSet
   //  {
   //      type swakExpression;
