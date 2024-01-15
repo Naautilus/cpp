@@ -43,6 +43,14 @@ solvers
         tolerance       1e-10;
         relTol          0;
     }
+
+    "(U|k|B|nuTilda|s).*"
+    {
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        tolerance       1e-09;
+        relTol          0;
+    }
 }
 
 PIMPLE

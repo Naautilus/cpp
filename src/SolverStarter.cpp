@@ -20,7 +20,7 @@ class SolverStarter {
     //commandString += "postProcess -func 'patchFlowRate(patch=outlet)';";
     //commandString += "pwd; pwd; pwd; pwd; pwd";
     //commandString += "foamPostProcess -func 'mag(mesh.boundaryMesh()[outlet].faceAreas())';";
-    commandString += "paraFoam &";
+    //commandString += "paraFoam &";
 
     system(commandString.c_str());
 

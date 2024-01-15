@@ -221,7 +221,14 @@ class ModelCreator {
 
   static void createModel(vector<structureLayer> structureData, int radialPointCount, vector<double> &cellResolutionsPerUnit, vector<double> &cellResolutionDistribution) {
 
-    // generate a list of edge faces, or "walls" in the simulation
+    nozzleFaces = {};
+    chamberSideFaces = {};
+    chamberAllFaces = {};
+    atmoAllFaces = {};
+    atmoSideFaces = {};
+    atmoBottomFaces = {};
+    cells = {};
+    atmoCells = {};
 
     cout << "structureData size: " + to_string(structureData.size()) + "\n" << endl;
     for (int zIndex = 0; zIndex <= structureData.size() - 1; zIndex++) {
@@ -462,7 +469,7 @@ class ModelCreator {
     double areaSum;
     for (int i = 0; i < rho.size(); i++) {
       //if (atmoAllFaces[i].getArea() < 1000 & atmoAllFaces.getArea())
-        double flowRate = A[i]*rho[i]*(U[i][0]*U[i][0] + U[i][1]*U[i][1] + U[i][2]*U[i][2]); // sqrt(U)^2
+        double flowRate = A[i]*rho[i]*U[i][2]*U[i][2]; // A[i]*rho[i]*(U[i][0]*U[i][0] + U[i][1]*U[i][1] + U[i][2]*U[i][2]); // sqrt(U)^2
         double flowRateAdjustmentConstant = 1; // 9.81*60/5116.3;
         flowRate *= flowRateAdjustmentConstant;
         flowRateSum += flowRate;

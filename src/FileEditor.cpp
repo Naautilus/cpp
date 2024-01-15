@@ -97,6 +97,7 @@ class FileEditor {
     }
     // Read the content of the file into a string
     string fileContent((istreambuf_iterator<char>(inputFile)), istreambuf_iterator<char>());
+    inputFile.close();
     return fileContent;
   }
 
@@ -175,7 +176,7 @@ class FileEditor {
     //  startPos--;
     //  cout << "[" + fileContent.substr(startPos, 1) + to_string(parenthesesCount) + "]";
     //} while (parenthesesCount > 0);
-
+    inputFile.close();
     return trimToParentheses(fileContent.substr(startPos, endPos-startPos));
     //return fileContent.substr(startPos, endPos-startPos);
   }

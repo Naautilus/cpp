@@ -26,7 +26,7 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         5e-04;        
+endTime         1e-03;        
 
 deltaT          1e-08;
 
@@ -48,7 +48,7 @@ timePrecision   10;
 
 adjustTimeStep  yes;
 
-maxCo           0.1;
+maxCo           0.04;
 
 maxDeltaT       1;
 

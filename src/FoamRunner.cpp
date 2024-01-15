@@ -2,17 +2,57 @@
 #include <filesystem>
 #include <iostream>
 #include <random>
+#include <cstdio>
+#include <stddef.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <time.h>
+#include "pthread.h"
 #include "ModelCreator.cpp"
+
 using namespace std;
 
+FILE *f;
+time_t start = time(0);
+
 // millimeters
-const double EXIT_RADIUS = 3.85*0.5;
-const double THROAT_RADIUS = 2.85*0.5;
-const double CHAMBER_RADIUS = THROAT_RADIUS*1.5; // 12.10*0.5;
+const double EXIT_RADIUS = 3.91*0.5; // originally 3.85*0.5 exit radius and 2.85*0.5 throat radius, but estes claims an area ratio of 2 so going to combination with closest to original radii with a ratio of sqrt2
+const double THROAT_RADIUS = 2.77*0.5;
+const double CHAMBER_RADIUS = THROAT_RADIUS*1; // 12.10*0.5;
 const double ATMOSPHERE_TO_EXIT_RADIUS_RATIO = 3; // cells between the chamber and atmosphere regions need to have matching faces which only integers and specific ratios work for
 const double ATMOSPHERE_REGION_RADIUS = EXIT_RADIUS * ATMOSPHERE_TO_EXIT_RADIUS_RATIO;
-const double ATMOSPHERE_REGION_HEIGHT = 30;
+const double ATMOSPHERE_REGION_HEIGHT = 25;
 const double NOZZLE_REGION_HEIGHT = EXIT_RADIUS*4;
+
+void writeToFile(string str) {
+  auto t = std::time(nullptr);
+  auto tm = *std::localtime(&t);
+  std::ostringstream oss;
+  oss << put_time(&tm, "%m/%d/%Y %H:%M:%S");
+  str = oss.str() + " (" + to_string((int)round(difftime(time(0), start))) + "s): " + str;
+  fwrite(str.c_str(), 1, str.length(), f);
+  fflush(f);
+}
+
+string vectorToString(vector<double> input, bool useNewline = true) {
+
+  int precision = 8;
+
+  string output = "";
+  output += "{";
+  for(int i = 0; i < input.size(); i++) {
+    std::stringstream sstream;
+    sstream.setf(std::ios::fixed);
+    sstream.precision(precision);
+    sstream << input[i];
+    output += sstream.str() + (i == input.size()-1 ? "" : ", ");
+  }
+  output += "}";
+  if (useNewline) {
+    output += "\n";
+  }
+  return output;
+}
 
 double runSimulation(vector<double> radii) {
   vector<structureLayer> structureData;
@@ -22,12 +62,12 @@ double runSimulation(vector<double> radii) {
     structureData.push_back(structureLayer(radii[i], radii[i+1], EXIT_RADIUS*4.0/(radii.size()-1), NOZZLE));
   }
   structureData.insert(structureData.begin(), structureLayer(THROAT_RADIUS, THROAT_RADIUS, THROAT_RADIUS*2, NOZZLE));
-  structureData.insert(structureData.begin(), structureLayer(CHAMBER_RADIUS, THROAT_RADIUS, (CHAMBER_RADIUS-THROAT_RADIUS)*3, NOZZLE));
+  //structureData.insert(structureData.begin(), structureLayer(CHAMBER_RADIUS, THROAT_RADIUS, (CHAMBER_RADIUS-THROAT_RADIUS)*3, NOZZLE));
   structureData.insert(structureData.begin(), structureLayer(CHAMBER_RADIUS, CHAMBER_RADIUS, 1, CHAMBER));
-  structureData.insert(structureData.end(), structureLayer(ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_HEIGHT, ATMOSPHERE, 0.5, ATMOSPHERE_TO_EXIT_RADIUS_RATIO, 0.7));
+  structureData.insert(structureData.end(), structureLayer(ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_HEIGHT, ATMOSPHERE, 0.3, ATMOSPHERE_TO_EXIT_RADIUS_RATIO, 0.5));
   //structureData.insert(structureData.end(), structureLayer(ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_RADIUS*1, ATMOSPHERE_REGION_RADIUS*3, ATMOSPHERE, 0.5, ATMOSPHERE_TO_EXIT_RADIUS_RATIO, 0.7));
   int angularResolution = 6;
-  vector<double> cellResolutionsPerUnit = {1, 1, 3}; // {side-to-side radius-wise, vertical, in-out}
+  vector<double> cellResolutionsPerUnit = {1, 2, 4}; // {side-to-side radius-wise, vertical, in-out}
   vector<double> cellResolutionDistribution = {1, 1, 1}; // {1, 1, -more central- to +more outside+} - must be locked for the atmosphere and exit radius to be connected while having different sizes
 
   FileEditor::copyProjectToGeneratedDirectory();
@@ -35,7 +75,11 @@ double runSimulation(vector<double> radii) {
   FileEditor::copyProjectToRunDirectory();
   SolverStarter::solve();
   FileEditor::copyRunDirectoryToGeneratedDirectory();
-  return ModelCreator::calculateIsp();
+  double result = ModelCreator::calculateIsp();
+  string text = "simulation run: " + vectorToString(radii, false) + ", score of " + to_string(result) + "\n";
+  writeToFile(text);
+  return result;
+
 }
 
 double runSimulation_Fake(vector<double> radii) {
@@ -105,20 +149,6 @@ void printVector(vector<double> input, bool useNewline = true) {
   }
 }
 
-string vectorToString(vector<double> input, bool useNewline = true) {
-  string output = "";
-  int precision = 5;
-  output += "{";
-  for(int i = 0; i < input.size(); i++) {
-    output += to_string(pow(10,-precision)*round(input[i]*pow(10,precision))) + (i == input.size()-1 ? "" : ", ");
-  }
-  output += "}";
-  if (useNewline) {
-    output += "\n";
-  }
-  return output;
-}
-
 vector<double> modifierData(simulationData originalData) {
   // return a list of [length] modifier doubles which in total have the magnitude (pythagorean) of 1
 
@@ -137,7 +167,7 @@ vector<double> modifierData(simulationData originalData) {
   //}
   //return output;
 
-  double gradientDistance = 0.0001;
+  double gradientDistance = 0.01;
   double magnitudeSquared = 0;
   vector<double> gradient;
   for (int i = 0; i < originalData.data.size(); i++) {
@@ -149,6 +179,7 @@ vector<double> modifierData(simulationData originalData) {
   for (int i = 0; i < gradient.size(); i++) {
     gradient[i] = gradient[i] / magnitude;
   }
+  writeToFile("gradient: " + vectorToString(gradient, false) + " with original magnitude " + to_string(magnitude) + "\n");
   cout << "gradient: ";
   printVector(gradient, false);
   cout << ", original magnitude " + to_string(magnitude) + "\n";
@@ -160,44 +191,50 @@ simulationData optimizeAlongModifierSet_Directional(simulationData startingData,
 
   cout << "--------------------------\n";
   // constants
-  const double targetPerformanceIncreaseFactor = 1.0001; // the increase in performance to target for followup expansion
-  const double startingExpansionExponent = -10; // this will start the modifier data multiplier at e^thisValue
-  const double exponentIncreaseFactor = 0.5; // this will increase the modifier data multiplier magnitude by e^thisValue every iteration; approx =*(1+thisValue) when close to 0, =*2.71 for thisValue==1
+  const double targetPerformanceIncreaseFactor = 1.001; // the increase in performance to target for followup expansion
+  const double startingExpansionExponent = log(0.01); // this will start the modifier data multiplier at e^thisValue
+  const double exponentIncreaseFactor = 0.3; // this will increase the modifier data multiplier magnitude by e^thisValue every iteration; approx =*(1+thisValue) when close to 0, =*2.71 for thisValue==1
 
   // set starting performance data
   simulationData bestPerformance = startingData;
+  int failures = 0;
 
   // run one modified simulation using startingData + modifierData*e^startingExpansionExponent. If it performs worse or under targetPerformanceIncreaseFactor, return startingData.
   simulationData modifiedData = simulationData(add(startingData.data, multiply(modifierData, exp(startingExpansionExponent))),0);
   if (modifiedData.getScore() < bestPerformance.getScore()) {
-    cout << "modified score was less than starting score\n";
-    return bestPerformance;
+    writeToFile("modified score was less than starting score\n");
+    failures++;
+    //return bestPerformance;
   }
   double initialPerformanceIncreaseFactor = modifiedData.getScore()/bestPerformance.getScore();
+  bestPerformance = modifiedData;
   //cout << "initialPerformanceIncreaseFactor: " + to_string(initialPerformanceIncreaseFactor) + "\n";
   //if (initialPerformanceIncreaseFactor < targetPerformanceIncreaseFactor) {
   //  cout << "Performance increase factor was less than minimum\n";
   //  return bestPerformance;
   //}
   double expansionExponent = startingExpansionExponent + log(log(targetPerformanceIncreaseFactor)/log(initialPerformanceIncreaseFactor)); // ln(1.01)/ln(1.001)
-  cout << "expansionExponent set to " + to_string(expansionExponent) + " after startingExpansionExponent of " + to_string(startingExpansionExponent) + " gave an increase of " + to_string(initialPerformanceIncreaseFactor) + "\n";
+  writeToFile("expansionExponent set to " + to_string(expansionExponent) + " after startingExpansionExponent of " + to_string(startingExpansionExponent) + " gave an increase of " + to_string(initialPerformanceIncreaseFactor) + "\n");
   if (expansionExponent < startingExpansionExponent) {
-    cout << "Followup modifier data value multiplier was less than the initial multiplier; decrease startingExpansionExponent or increase targetPerformanceIncreaseFactor\n";
-    return bestPerformance;
+    writeToFile("Followup modifier data value multiplier was less than the initial multiplier; decrease startingExpansionExponent or increase targetPerformanceIncreaseFactor. Continuing using initial multiplier.\n");
+    expansionExponent = startingExpansionExponent;
   }
   // Otherwise, scale exponent to the desired initial increase in performance and run repeatedly until the data stops improving.
-  int iterations = 0;
+  int iterations = 1;
   while (true) {
     expansionExponent += exponentIncreaseFactor;
     modifiedData = simulationData(add(startingData.data, multiply(modifierData, exp(expansionExponent))),0);
     if (modifiedData.getScore() > bestPerformance.getScore()) {
       bestPerformance = modifiedData;
-      iterations++;
     } else {
-      break;
+      failures++;
+      if (failures > 5) {
+        break;
+      }
     }
+    iterations++;
   }
-  cout << "New maximum found after " + to_string(iterations) + " iterations\n";
+  writeToFile("New maximum found after " + to_string(iterations) + " iterations\n");
   return bestPerformance;
 }
 
@@ -216,25 +253,32 @@ void printSimulationData(simulationData s) {
 }
 
 string simulationDataToString(simulationData s) {
+  //return "simulation run: " + vectorToString(s.data, false) + ", score of " + to_string(s.getScore) + "\n";
   return vectorToString(s.data, false) + " with a score of " + to_string(s.getScore()) + "\n";
 }
 
 int main() {
 
-  FILE *f = fopen("dataLogger", "w");
+  //f = fopen("/home/matth/cpp/dataLogger", "w");
+  f = fopen("/home/matth/cpp/dataLogger", "a");
+
+  writeToFile("start\n");
 
   // initialize radius parameters
   int radiusDataSize = 10;
+  // uncomment this code to generate radii from scratch
   vector<double> radii;
-  for (int i = 0; i < radiusDataSize; i++) {
-    radii.push_back(THROAT_RADIUS * (i+1)/(radiusDataSize+2) + EXIT_RADIUS * (1-(i+1)/(radiusDataSize+2)));
+  for (double i = 0; i < radiusDataSize; i++) {
+    radii.push_back(THROAT_RADIUS * (1-(i+1)/(radiusDataSize+1)) + EXIT_RADIUS * (i+1)/(radiusDataSize+1));
   }
+  // uncomment this code to manually input radii
+  //vector<double> radii = {1.46980071, 1.52095299, 1.56062910, 1.60608449, 1.65749077, 1.69732621, 1.74318101, 1.78859847, 1.83914800};
   simulationData bestData = simulationData(radii, runSimulation(radii));
-  printSimulationData(bestData);
+  //writeToFile(simulationDataToString(bestData));
   for (int i = 0; i < 1000; i++) {
     bestData = optimizeAlongModifierSet(bestData, modifierData(bestData));
     printSimulationData(bestData);
-    fprintf(f, "%s", simulationDataToString(bestData).c_str());
+    //writeToFile(simulationDataToString(bestData));
   }
 
   fclose(f);

@@ -8,33 +8,32 @@
 FoamFile
 {
     format      ascii;
-    class       volVectorField;
-    object      U;
+    class       volScalarField;
+    location    "0";
+    object      v2;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 1 -1 0 0 0 0];
+dimensions      [0 2 -1 0 0 0 0];
 
-internalField   uniform (0 0 0);
+internalField   uniform 0;
 
 boundaryField
 {
     inlet
     {
-        //type            timeVaryingMappedFixedValue;
         type            zeroGradient;
-    }
-
+	}
     sides
     {
-        type            slip;
+        type            nutkWallFunction;
+        value           uniform 0;
     }
-
     outlet
     {
-        type            freestreamVelocity;
-        freestreamValue uniform (0 0 0);
+        type            zeroGradient;
     }
 }
+
 
 // ************************************************************************* //
