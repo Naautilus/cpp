@@ -54,7 +54,7 @@ string vectorToString(vector<double> input, bool useNewline = true) {
   return output;
 }
 
-double runSimulation(vector<double> radii) {
+double runSimulation_Sub(vector<double> radii) {
   vector<structureLayer> structureData;
   radii.insert(radii.begin(), THROAT_RADIUS);
   radii.insert(radii.end(), EXIT_RADIUS);
@@ -64,10 +64,10 @@ double runSimulation(vector<double> radii) {
   structureData.insert(structureData.begin(), structureLayer(THROAT_RADIUS, THROAT_RADIUS, THROAT_RADIUS*2, NOZZLE));
   //structureData.insert(structureData.begin(), structureLayer(CHAMBER_RADIUS, THROAT_RADIUS, (CHAMBER_RADIUS-THROAT_RADIUS)*3, NOZZLE));
   structureData.insert(structureData.begin(), structureLayer(CHAMBER_RADIUS, CHAMBER_RADIUS, 1, CHAMBER));
-  structureData.insert(structureData.end(), structureLayer(ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_HEIGHT, ATMOSPHERE, 0.3, ATMOSPHERE_TO_EXIT_RADIUS_RATIO, 0.5));
+  structureData.insert(structureData.end(), structureLayer(ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_HEIGHT, ATMOSPHERE, 0.6, ATMOSPHERE_TO_EXIT_RADIUS_RATIO, 0.5));
   //structureData.insert(structureData.end(), structureLayer(ATMOSPHERE_REGION_RADIUS, ATMOSPHERE_REGION_RADIUS*1, ATMOSPHERE_REGION_RADIUS*3, ATMOSPHERE, 0.5, ATMOSPHERE_TO_EXIT_RADIUS_RATIO, 0.7));
   int angularResolution = 6;
-  vector<double> cellResolutionsPerUnit = {1, 2, 4}; // {side-to-side radius-wise, vertical, in-out}
+  vector<double> cellResolutionsPerUnit = {1, 1, 4}; // {side-to-side radius-wise, vertical, in-out}
   vector<double> cellResolutionDistribution = {1, 1, 1}; // {1, 1, -more central- to +more outside+} - must be locked for the atmosphere and exit radius to be connected while having different sizes
 
   FileEditor::copyProjectToGeneratedDirectory();
@@ -76,10 +76,59 @@ double runSimulation(vector<double> radii) {
   SolverStarter::solve();
   FileEditor::copyRunDirectoryToGeneratedDirectory();
   double result = ModelCreator::calculateIsp();
-  string text = "simulation run: " + vectorToString(radii, false) + ", score of " + to_string(result) + "\n";
-  writeToFile(text);
   return result;
 
+}
+
+vector<double> multiply(vector<double> input, double factor) {
+  vector<double> output;
+  for (double num : input) {
+    output.push_back(num*factor);
+  }
+  return output;
+}
+
+vector<double> add(vector<double> a, vector<double> b) {
+  vector<double> output;
+  for (int i = 0; i < a.size(); i++) {
+    output.push_back(a[i]+b[i]);
+  }
+  return output;
+}
+
+vector<double> randomData(int length, double desiredMagnitude) {
+  
+  unsigned seed = chrono::steady_clock::now().time_since_epoch().count();
+  default_random_engine e(seed);
+  
+  vector<double> output;
+  double magnitudeSquared = 0;
+  for (int i = 0; i < length; i++) {
+    auto rand = uniform_real_distribution<double>(-1, 1);
+    double num = rand(e);
+    magnitudeSquared += num*num;
+    output.push_back(num);
+  }
+  double magnitude = sqrt(magnitudeSquared);
+  for (int i = 0; i < length; i++) {
+    output[i] *= desiredMagnitude / magnitude;
+  }
+  return output;
+
+}
+
+double runSimulation(vector<double> radii) {
+  int averagingIterations = 5;
+  double modifier = 0.001; // slightly randomize values an insignificant amount to trigger result randomization
+  double average = 0;
+  for (int i = 0; i < averagingIterations; i++) {
+    vector<double> radiiModified = add(radii, randomData(radii.size(), modifier));
+    average += runSimulation_Sub(radiiModified);
+  }  
+  average /= averagingIterations;
+  string text = "simulation run: " + vectorToString(radii, false) + ", score of " + to_string(average) + "\n";
+  writeToFile(text);
+  return average;
 }
 
 double runSimulation_Fake(vector<double> radii) {
@@ -121,22 +170,6 @@ vector<double> axisVector(int length, int axisIndex, double value) {
   return output;
 }
 
-vector<double> multiply(vector<double> input, double factor) {
-  vector<double> output;
-  for (double num : input) {
-    output.push_back(num*factor);
-  }
-  return output;
-}
-
-vector<double> add(vector<double> a, vector<double> b) {
-  vector<double> output;
-  for (int i = 0; i < a.size(); i++) {
-    output.push_back(a[i]+b[i]);
-  }
-  return output;
-}
-
 void printVector(vector<double> input, bool useNewline = true) {
   int precision = 5;
   cout << "{";
@@ -150,24 +183,8 @@ void printVector(vector<double> input, bool useNewline = true) {
 }
 
 vector<double> modifierData(simulationData originalData) {
-  // return a list of [length] modifier doubles which in total have the magnitude (pythagorean) of 1
 
-  //unsigned seed = chrono::steady_clock::now().time_since_epoch().count();
-  //default_random_engine e(seed);
-  //vector<double> output;
-  //double magnitudeSquared;
-  //for (int i = 0; i < length; i++) {
-  //  auto rand = uniform_real_distribution<double>(-1, 1);
-  //  output.push_back(rand(e));
-  //  magnitudeSquared += output[i]*output[i];
-  //}
-  //double magnitude = sqrt(magnitudeSquared);
-  //for (int i = 0; i < length; i++) {
-  //  output[i] /= magnitude;
-  //}
-  //return output;
-
-  double gradientDistance = 0.01;
+  double gradientDistance = 0.02;
   double magnitudeSquared = 0;
   vector<double> gradient;
   for (int i = 0; i < originalData.data.size(); i++) {
@@ -191,8 +208,8 @@ simulationData optimizeAlongModifierSet_Directional(simulationData startingData,
 
   cout << "--------------------------\n";
   // constants
-  const double targetPerformanceIncreaseFactor = 1.001; // the increase in performance to target for followup expansion
-  const double startingExpansionExponent = log(0.01); // this will start the modifier data multiplier at e^thisValue
+  //const double targetPerformanceIncreaseFactor = 1.001; // the increase in performance to target for followup expansion
+  const double startingExpansionExponent = log(0.02); // this will start the modifier data multiplier at e^thisValue
   const double exponentIncreaseFactor = 0.3; // this will increase the modifier data multiplier magnitude by e^thisValue every iteration; approx =*(1+thisValue) when close to 0, =*2.71 for thisValue==1
 
   // set starting performance data
@@ -206,15 +223,16 @@ simulationData optimizeAlongModifierSet_Directional(simulationData startingData,
     failures++;
     //return bestPerformance;
   }
-  double initialPerformanceIncreaseFactor = modifiedData.getScore()/bestPerformance.getScore();
+  //double initialPerformanceIncreaseFactor = modifiedData.getScore()/bestPerformance.getScore();
   bestPerformance = modifiedData;
   //cout << "initialPerformanceIncreaseFactor: " + to_string(initialPerformanceIncreaseFactor) + "\n";
   //if (initialPerformanceIncreaseFactor < targetPerformanceIncreaseFactor) {
   //  cout << "Performance increase factor was less than minimum\n";
   //  return bestPerformance;
   //}
-  double expansionExponent = startingExpansionExponent + log(log(targetPerformanceIncreaseFactor)/log(initialPerformanceIncreaseFactor)); // ln(1.01)/ln(1.001)
-  writeToFile("expansionExponent set to " + to_string(expansionExponent) + " after startingExpansionExponent of " + to_string(startingExpansionExponent) + " gave an increase of " + to_string(initialPerformanceIncreaseFactor) + "\n");
+  //double expansionExponent = startingExpansionExponent + log(log(targetPerformanceIncreaseFactor)/log(initialPerformanceIncreaseFactor)); // ln(1.01)/ln(1.001)
+  double expansionExponent = startingExpansionExponent;
+  writeToFile("expansionExponent set to " + to_string(expansionExponent) + " after startingExpansionExponent of " + to_string(startingExpansionExponent) + " gave an increase of " + /*to_string(initialPerformanceIncreaseFactor) + */"\n");
   if (expansionExponent < startingExpansionExponent) {
     writeToFile("Followup modifier data value multiplier was less than the initial multiplier; decrease startingExpansionExponent or increase targetPerformanceIncreaseFactor. Continuing using initial multiplier.\n");
     expansionExponent = startingExpansionExponent;
@@ -265,20 +283,26 @@ int main() {
   writeToFile("start\n");
 
   // initialize radius parameters
-  int radiusDataSize = 10;
+  int radiusDataSize = 5;
   // uncomment this code to generate radii from scratch
-  vector<double> radii;
-  for (double i = 0; i < radiusDataSize; i++) {
-    radii.push_back(THROAT_RADIUS * (1-(i+1)/(radiusDataSize+1)) + EXIT_RADIUS * (i+1)/(radiusDataSize+1));
-  }
+  //vector<double> radii;
+  //for (double i = 0; i < radiusDataSize; i++) {
+  //  //radii.push_back(THROAT_RADIUS * (1-(i+1)/(radiusDataSize+1)) + EXIT_RADIUS * (i+1)/(radiusDataSize+1));
+  //  //radii.push_back(THROAT_RADIUS * max(2*(1-(i+1)/(radiusDataSize+1))-1,0.0) + EXIT_RADIUS * min(2*((i+1)/(radiusDataSize+1)),1.0));
+  //  radii.push_back(THROAT_RADIUS * max(3*(1-(i+1)/(radiusDataSize+1))-2,0.0) + EXIT_RADIUS * min(3*((i+1)/(radiusDataSize+1)),1.0));
+  //}
+  
   // uncomment this code to manually input radii
-  //vector<double> radii = {1.46980071, 1.52095299, 1.56062910, 1.60608449, 1.65749077, 1.69732621, 1.74318101, 1.78859847, 1.83914800};
+  vector<double> radii = {1.52156215, 1.68392252, 1.78638975, 1.74785162, 1.87262597};
   simulationData bestData = simulationData(radii, runSimulation(radii));
   //writeToFile(simulationDataToString(bestData));
   for (int i = 0; i < 1000; i++) {
-    bestData = optimizeAlongModifierSet(bestData, modifierData(bestData));
-    printSimulationData(bestData);
-    //writeToFile(simulationDataToString(bestData));
+    simulationData bestDataCompetitor = optimizeAlongModifierSet(bestData, modifierData(bestData));
+    if (bestDataCompetitor.score > bestData.score) {
+      bestData = bestDataCompetitor;
+    }
+    writeToFile("BEST: ");
+    writeToFile(simulationDataToString(bestData));
   }
 
   fclose(f);
